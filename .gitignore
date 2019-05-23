@@ -1,9 +1,11 @@
 # gitignore
 
+tmp/
+
 # package directories
 node_modules
 
 
 /*.log
-.env*
+.env
 .webpack
