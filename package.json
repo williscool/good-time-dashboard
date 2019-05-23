@@ -1,0 +1,39 @@
+{
+  "name": "good-time-dashboard",
+  "version": "0.0.0-dev",
+  "description": "Get events in the area in json. Import them into google sheets. Profit (from search)",
+  "main": "index.js",
+  "author": "William Harris <wharris@upscalews.com>",
+  "license": "GPL3",
+  "private": true,
+  "dependencies": {
+    "commander": "^2.20.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/node": "^7.4.5",
+    "@babel/preset-env": "^7.4.5",
+    "@babel/register": "^7.4.4",
+    "babel-eslint": "^10.0.1",
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-config-prettier": "^4.3.0",
+    "eslint-plugin-import": "^2.17.2",
+    "husky": "^2.3.0",
+    "nodemon": "^1.19.0",
+    "prettier": "^1.17.1",
+    "prettier-eslint": "^8.8.2"
+  },
+  "scripts": {
+    "lint": "eslint . --ext .js",
+    "start": "babel-node src/index.js",
+    "start-watch": "nodemon --exec babel-node src/index.js"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn lint",
+      "pre-push": "yarn lint"
+    }
+  }
+}
