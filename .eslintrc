@@ -10,7 +10,6 @@
     }],
     "valid-jsdoc": ["error", {
       "requireReturn": false
-    }],
-    "require-jsdoc": "error"
+    }]
   }
 }
