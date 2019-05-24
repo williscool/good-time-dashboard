@@ -5,11 +5,12 @@ import to from "await-to-js"
 import path from "path"
 import fs from "fs-extra"
 import util from "util"
+import querystring from "querystring"
 
 dotenv.config()
 
 const DEFAULT_REPORT_NAME = "report_from_today"
-const { EVENTBRITE_OAUTH_TOKEN } = process.env
+const { EVENTBRITE_OAUTH_TOKEN, CENTER_POINT_ADDRESS } = process.env
 
 commander
   .description("Good Time Dashboard Data Generator")
@@ -21,8 +22,16 @@ async function getEventsFromEventBrite() {
   // Create configured Eventbrite SDK
   const sdk = eventbrite({ token: EVENTBRITE_OAUTH_TOKEN })
 
-  // See: https://www.eventbrite.com/developer/v3/endpoints/users/#ebapi-get-users-id
-  const [err, data] = await to(sdk.request("/users/me"))
+  // See: https://www.eventbrite.com/platform/api#/reference/event-search/search-events
+
+  const searchParams = {
+    q:"",
+    sort_by: "date",
+    "location.address": CENTER_POINT_ADDRESS,
+    "location.within": "50mi"
+  }
+
+  const [err, data] = await to(sdk.request(`/events/search/?${querystring.stringify(searchParams)}`))
 
   if (err) {
     console.error(err)
@@ -48,7 +57,7 @@ async function writeJSON() {
   const OUTPUT_FILE_PATH = path.format(outputPathObject)
   const outputFile = util.promisify(fs.outputFile)
 
-  const [fileReadErr,] = await to(outputFile(OUTPUT_FILE_PATH, await getEventsFromEventBrite()))
+  const [fileReadErr] = await to(outputFile(OUTPUT_FILE_PATH, await getEventsFromEventBrite()))
 
   if (fileReadErr) {
     console.error(fileReadErr)
@@ -58,4 +67,4 @@ async function writeJSON() {
   console.log(`${OUTPUT_FILE_PATH} was saved!`)
 }
 
-writeJSON();
+writeJSON()
