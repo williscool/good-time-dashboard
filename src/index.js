@@ -13,7 +13,7 @@ const DEFAULT_REPORT_NAME = "report_from_today"
 const { EVENTBRITE_OAUTH_TOKEN, CENTER_POINT_ADDRESS } = process.env
 
 commander
-  .description("Good Time Dashboard Data Generator")
+  .description("Good Time Intel Tool Data Generator")
   .option("-o, --output-filename", `name of the output json. defaults to ${DEFAULT_REPORT_NAME}`)
 
 commander.parse(process.argv)

@@ -1,5 +1,5 @@
 {
-  "name": "good-time-dashboard",
+  "name": "good-time-intelligence-tool",
   "version": "0.0.0-dev",
   "description": "Get events in the area in json. Import them into google sheets. Profit (from search)",
   "main": "index.js",
