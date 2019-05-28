@@ -8,15 +8,16 @@
 
 - get all the pages (its paginated)
 
-questions here? 
+questions here?
 
-do we get all and search after the load phase? or do we search in the intial extraction phase?... answer lets just search ahead of time ... if 
+do we get all and search after the load phase? or do we search in the intial extraction phase?... answer lets just search ahead of time ... if
 
 we also don't need to cache forever becasue we don't care about events once they pass.
 
 
 ### Transfrom
-- html parser and text extraction for descriptons
+
+- html parser and text extraction for descriptons ... so it turns out eventbrite already has the plantext descriptons so we can just search on those
 
 
 ### Load
