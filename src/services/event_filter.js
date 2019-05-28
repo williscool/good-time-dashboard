@@ -1,4 +1,8 @@
 import Fuse from "fuse.js";
+import { parse } from "json2csv";
+
+const SEARCH_KEYS = ["name.text", "summary", "description.text"];
+const CSV_COLUMNS_KEYS = ["id", "name.text", "start.local", "summary", "description.text", "url", "start.timezone"];
 
 class EventFilterService {
   constructor(rawOutput) {
@@ -11,7 +15,7 @@ class EventFilterService {
       distance: 100,
       maxPatternLength: 32,
       minMatchCharLength: 1,
-      keys: ["name.text", "description.text", "summary"]
+      keys: SEARCH_KEYS
     };
 
     let fullEventList = [];
@@ -36,6 +40,20 @@ class EventFilterService {
 
     // TODO: we could do some de dupe by id
     return results;
+  }
+
+  static generateCsvFromEventList(eventList) {
+    const fields = CSV_COLUMNS_KEYS;
+    const opts = { fields };
+    let csv = "";
+
+    try {
+      csv = parse(eventList, opts);
+    } catch (err) {
+      console.error(err);
+    }
+
+    return csv;
   }
 }
 

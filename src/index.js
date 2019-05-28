@@ -7,6 +7,8 @@ import util from "util";
 import CachedEventbriteService, { DEFAULT_DAYS_AHEAD, TEST_NUMBER_OF_PAGES } from "./services/cached_eventbrite";
 import EventFilterService from "./services/event_filter";
 
+const outputFile = util.promisify(fs.outputFile);
+
 const DEFAULT_REPORT_NAME_PREFIX = "gti_output";
 
 commander
@@ -26,6 +28,7 @@ commander.parse(process.argv);
  *
  */
 async function init() {
+  // 1. Extract
   const cEbService = new CachedEventbriteService();
 
   const reportName = `${DEFAULT_REPORT_NAME_PREFIX}_${DEFAULT_DAYS_AHEAD}_days_from_${moment()
@@ -34,14 +37,13 @@ async function init() {
 
   const rawReportName = `raw_${reportName}`;
 
-  const outputPathObject = {
+  const rawJSONoutputPathObject = {
     dir: "tmp",
     name: rawReportName,
     ext: ".json"
   };
 
-  const OUTPUT_FILE_PATH = path.format(outputPathObject);
-  const outputFile = util.promisify(fs.outputFile);
+  const OUTPUT_FILE_PATH = path.format(rawJSONoutputPathObject);
 
   if (commander.clearCache) {
     console.log("Clearing cache before processing...");
@@ -72,14 +74,33 @@ async function init() {
   const rawOutput = JSON.parse(fullRawJSONOutputStr);
   // rawOutput.event_pages[0].events[0].description.text
 
+  // 2. Transform
+  console.log("filtering events...");
   const filter = new EventFilterService(rawOutput);
-
-  // eslint-disable-next-line no-unused-vars
   const events = filter.getDefaultSearches();
 
-  // eslint-disable-next-line no-debugger
-  debugger;
+  // 3. Load
+
   // all we gotta do is turn the next bit into csv
+  console.log("generating then writting csv...");
+  const csvOutputPathObject = {
+    dir: "tmp",
+    name: reportName,
+    ext: ".csv"
+  };
+
+  const csvStr = EventFilterService.generateCsvFromEventList(events);
+
+  const CSV_OUTPUT_FILE_PATH = path.format(csvOutputPathObject);
+
+  const [csvfileReadErr] = await to(outputFile(CSV_OUTPUT_FILE_PATH, csvStr));
+
+  if (csvfileReadErr) {
+    console.error(csvfileReadErr);
+    process.exit(0);
+  }
+
+  console.log(`${CSV_OUTPUT_FILE_PATH} was saved!`);
 }
 
 init();
