@@ -4,7 +4,7 @@ import to from "await-to-js";
 import path from "path";
 import fs from "fs-extra";
 import util from "util";
-import CachedEventbriteService, { DEFAULT_DAYS_AHEAD } from "./services/cached_eventbrite";
+import CachedEventbriteService, { DEFAULT_DAYS_AHEAD, TEST_NUMBER_OF_PAGES } from "./services/cached_eventbrite";
 
 const DEFAULT_REPORT_NAME_PREFIX = "gti_output";
 
@@ -43,7 +43,7 @@ async function writeJSON() {
   console.log("Beginning processing...");
 
   if (commander.test) {
-    console.log('Running in Test Mode. Only Processing 4 events')
+    console.log(`Running in Test Mode. Only Processing ${TEST_NUMBER_OF_PAGES} pages of events`)
     searchEventsOpts.testMode = true;
   }
 

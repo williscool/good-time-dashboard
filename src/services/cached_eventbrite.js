@@ -4,11 +4,13 @@ import eventbrite from "eventbrite";
 import moment from "moment";
 import querystring from "querystring";
 import to from "await-to-js";
+import ProgressBar from "progress";
 
 dotenv.config();
 
 const { EVENTBRITE_OAUTH_TOKEN, CENTER_POINT_ADDRESS } = process.env;
 
+export const TEST_NUMBER_OF_PAGES = 4;
 export const DEFAULT_DAYS_AHEAD = 15;
 
 // https://www.eventbrite.com/platform/api#/introduction/basic-types/local-datetime
@@ -79,7 +81,7 @@ class CachedEventbriteService {
     mileRadiusWithin = "25",
     address = CENTER_POINT_ADDRESS,
     daysAhead = DEFAULT_DAYS_AHEAD,
-    testMode = true,
+    testMode = true
   } = {}) {
     this.metrics.fnInput = {
       query,
@@ -126,8 +128,10 @@ class CachedEventbriteService {
     this.cacheObjects.push(fullOutputCacheEntry);
 
     if (fullOutputCacheEntry.isCached) {
+      console.log('Full Output Cached Already. Returning that')
       return fullOutputCacheEntry.value;
     }
+
 
     // cache first page to get number of pages
     // pages are 1 indexed :/
@@ -140,14 +144,31 @@ class CachedEventbriteService {
     // https://www.eventbrite.com/platform/api#/introduction/paginated-responses
     currentPage = 2;
 
-    let totalPages = 4 // test version
+    let totalPages = TEST_NUMBER_OF_PAGES; // test version
 
-    if(!testMode){
+    if (!testMode) {
       totalPages = parseInt(firstPageData.pagination.page_count, 10);
     }
 
+    // Stepts
+    // 1. Get the page from either eventbrite or the cache
+    // 2. Write the page out to full_output
+    const NUMBER_OF_STEPS = 2;
+
+    const bar = new ProgressBar(' updating [:bar] :percent', {
+      complete: '=',
+      incomplete: ' ',
+      width: 40,
+      total: totalPages * NUMBER_OF_STEPS,
+    });
+
+    // tick once because first page.
+    bar.tick();
+
     this.metrics.eventbrite.totalPages = totalPages;
     this.metrics.eventbrite.totalNumberEvents = parseInt(firstPageData.pagination.object_count, 10);
+
+    bar.interrupt(`Parsing ${firstPageData.pagination.object_count} events over ${totalPages} pages...`)
 
     while (currentPage <= totalPages) {
       // get next page by setting search param
@@ -163,6 +184,7 @@ class CachedEventbriteService {
       await this.cachedSearchRequest(nextPageCacheKey, searchParams);
 
       currentPage += 1;
+      bar.tick();
     }
 
     let writtenPages = 1;
@@ -184,6 +206,7 @@ class CachedEventbriteService {
       fullOutput.event_pages.push(JSON.parse(pageCacheEntry.value));
 
       writtenPages += 1;
+      bar.tick();
     }
 
     await this.cache.set(fullOutputCacheKey, JSON.stringify(fullOutput));
