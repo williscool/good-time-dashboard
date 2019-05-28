@@ -1,0 +1,195 @@
+import AsyncDiskCache from "async-disk-cache";
+import dotenv from "dotenv";
+import eventbrite from "eventbrite";
+import moment from "moment";
+import querystring from "querystring";
+import to from "await-to-js";
+
+dotenv.config();
+
+const { EVENTBRITE_OAUTH_TOKEN, CENTER_POINT_ADDRESS } = process.env;
+
+export const DEFAULT_DAYS_AHEAD = 15;
+
+// https://www.eventbrite.com/platform/api#/introduction/basic-types/local-datetime
+// NOTE: event brite wants a naive datetime
+// that is one WITHOUT a timezone. that is why we have to format this way
+// it uses the timezone of the event location to find stuff
+const DATETIME_FORMAT_EVENTBRITE_WANTS = "YYYY-MM-DDThh:mm:ss";
+
+class CachedEventbriteService {
+  constructor() {
+    this.cache = new AsyncDiskCache("eventbrite-api-request-cache", {
+      location: "tmp/"
+    });
+
+    this.cacheObjects = [];
+
+    this.metrics = { eventbrite: { totalPages: 0 } };
+  }
+
+  generateMetrics() {
+    const hits = this.cacheObjects.filter(cacher => cacher.isCached).length;
+    const misses = this.cacheObjects.filter(cacher => !cacher.isCached).length;
+
+    return Object.assign(this.metrics, { cache: { hits, misses } });
+  }
+
+  static generateCacheKeyPrefix(params) {
+    return Object.entries(params)
+      .map(([key, value]) => `${key}:${value}`)
+      .join(",");
+  }
+
+  static generatePageCacheKey(cacheKeyPrefix, page) {
+    return `${cacheKeyPrefix}_page_number:${page}`;
+  }
+
+  async cachedSearchRequest(key, searchParams) {
+    // Create configured Eventbrite SDK
+    const sdk = eventbrite({ token: EVENTBRITE_OAUTH_TOKEN });
+
+    const cacheEntry = await this.cache.get(key);
+    this.cacheObjects.push(cacheEntry);
+
+    let data = {};
+
+    if (cacheEntry.isCached) {
+      data = JSON.parse(cacheEntry.value);
+    } else {
+      let requestErr = {};
+
+      [requestErr, data] = await to(
+        sdk.request(`/events/search/?${querystring.unescape(querystring.stringify(searchParams))}`)
+      );
+
+      if (requestErr) {
+        console.error(requestErr);
+        process.exit(0);
+      }
+
+      await this.cache.set(key, JSON.stringify(data));
+    }
+
+    return data;
+  }
+
+  async searchEvents({
+    query = "",
+    mileRadiusWithin = "25",
+    address = CENTER_POINT_ADDRESS,
+    daysAhead = DEFAULT_DAYS_AHEAD,
+    testMode = true,
+  } = {}) {
+    this.metrics.fnInput = {
+      query,
+      mileRadiusWithin,
+      address,
+      daysAhead,
+      testMode
+    };
+
+    const startDatetime = moment()
+      .startOf("day")
+      .format(DATETIME_FORMAT_EVENTBRITE_WANTS);
+
+    const endDatetime = moment()
+      .startOf("day")
+      .add(daysAhead, "days")
+      .format(DATETIME_FORMAT_EVENTBRITE_WANTS);
+
+    // See: https://www.eventbrite.com/platform/api#/reference/event-search/search-events
+
+    // MAKE SURE THERE IS NO SPACE IN BETWEEN
+    // location.within and the unit or you are GOING TO HAVE A BAD TIME
+    // i.e. 50mi
+    //
+    // it must look like ^
+    // if not the eventbrite api gives really cryptic and useless errors in that case
+    const searchParams = {
+      q: query,
+      sort_by: "date",
+      "location.address": address,
+      "location.within": `${mileRadiusWithin}mi`,
+      "start_date.range_start": startDatetime,
+      "start_date.range_end": endDatetime
+    };
+
+    this.metrics.eventbrite.searchParams = searchParams;
+
+    const cacheKeyPrefix = CachedEventbriteService.generateCacheKeyPrefix(searchParams);
+
+    const fullOutputCacheKey = `${cacheKeyPrefix}_full_output`;
+
+    // if we already have the full page just return it
+    const fullOutputCacheEntry = await this.cache.get(fullOutputCacheKey);
+    this.cacheObjects.push(fullOutputCacheEntry);
+
+    if (fullOutputCacheEntry.isCached) {
+      return fullOutputCacheEntry.value;
+    }
+
+    // cache first page to get number of pages
+    // pages are 1 indexed :/
+    let currentPage = 1;
+
+    const firstPageCacheKey = `${CachedEventbriteService.generatePageCacheKey(cacheKeyPrefix, currentPage)}`;
+    const firstPageData = await this.cachedSearchRequest(firstPageCacheKey, searchParams);
+
+    // dealing with eventbrite paginated responses
+    // https://www.eventbrite.com/platform/api#/introduction/paginated-responses
+    currentPage = 2;
+
+    let totalPages = 4 // test version
+
+    if(!testMode){
+      totalPages = parseInt(firstPageData.pagination.page_count, 10);
+    }
+
+    this.metrics.eventbrite.totalPages = totalPages;
+    this.metrics.eventbrite.totalNumberEvents = parseInt(firstPageData.pagination.object_count, 10);
+
+    while (currentPage <= totalPages) {
+      // get next page by setting search param
+      searchParams.page = currentPage;
+
+      const nextPageCacheKey = `${CachedEventbriteService.generatePageCacheKey(cacheKeyPrefix, currentPage)}`;
+
+      // https://eslint.org/docs/rules/no-await-in-loop
+      // we dont want one page failing all other
+      // plus lets make it work then think about optimal
+      //
+      // eslint-disable-next-line no-await-in-loop
+      await this.cachedSearchRequest(nextPageCacheKey, searchParams);
+
+      currentPage += 1;
+    }
+
+    let writtenPages = 1;
+
+    const fullOutput = { event_pages: [] };
+
+    while (writtenPages <= totalPages) {
+      // eslint-disable-next-line no-await-in-loop
+      const pageCacheEntry = await this.cache.get(
+        `${CachedEventbriteService.generatePageCacheKey(cacheKeyPrefix, writtenPages)}`
+      );
+
+      if (!pageCacheEntry.isCached) {
+        console.error("wrtting uncached entry how did this happen? dumping CachedEventbriteService context...");
+        console.error(this);
+        process.exit(1);
+      }
+
+      fullOutput.event_pages.push(JSON.parse(pageCacheEntry.value));
+
+      writtenPages += 1;
+    }
+
+    await this.cache.set(fullOutputCacheKey, JSON.stringify(fullOutput));
+
+    return JSON.stringify(await this.cache.get(fullOutputCacheKey));
+  }
+}
+
+export default CachedEventbriteService;
