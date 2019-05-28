@@ -2,7 +2,7 @@ import Fuse from "fuse.js";
 import { parse } from "json2csv";
 
 const SEARCH_KEYS = ["name.text", "summary", "description.text"];
-const CSV_COLUMNS_KEYS = ["id", "name.text", "start.local", "summary", "description.text", "url", "start.timezone"];
+const CSV_COLUMNS_KEYS = ["id", "url", "name.text", "start.local", "summary", "description.text", "start.timezone"];
 
 class EventFilterService {
   constructor(rawOutput) {
