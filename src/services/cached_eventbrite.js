@@ -8,10 +8,12 @@ import ProgressBar from "progress";
 
 dotenv.config();
 
-const { EVENTBRITE_OAUTH_TOKEN, CENTER_POINT_ADDRESS } = process.env;
+const { EVENTBRITE_OAUTH_TOKEN, CENTER_POINT_ADDRESS, MILE_RADIUS_WITHIN, DAYS_AHEAD } = process.env;
 
 export const TEST_NUMBER_OF_PAGES = 4;
 export const DEFAULT_DAYS_AHEAD = 15;
+const DEFAULT_CENTER_POINT_ADDRESS = "San Francisco,CA";
+const DEFAULT_MILE_RADIUS_WITHIN = "25";
 
 // https://www.eventbrite.com/platform/api#/introduction/basic-types/local-datetime
 // NOTE: event brite wants a naive datetime
@@ -78,9 +80,9 @@ class CachedEventbriteService {
 
   async searchEvents({
     query = "",
-    mileRadiusWithin = "25",
-    address = CENTER_POINT_ADDRESS,
-    daysAhead = DEFAULT_DAYS_AHEAD,
+    mileRadiusWithin = MILE_RADIUS_WITHIN || DEFAULT_MILE_RADIUS_WITHIN,
+    address = CENTER_POINT_ADDRESS || DEFAULT_CENTER_POINT_ADDRESS,
+    daysAhead = DAYS_AHEAD || DEFAULT_DAYS_AHEAD,
     testMode = true
   } = {}) {
     this.metrics.fnInput = {
@@ -128,10 +130,9 @@ class CachedEventbriteService {
     this.cacheObjects.push(fullOutputCacheEntry);
 
     if (fullOutputCacheEntry.isCached) {
-      console.log('Full Output Cached Already. Returning that')
+      console.log("Full Output Cached Already. Returning that");
       return fullOutputCacheEntry.value;
     }
-
 
     // cache first page to get number of pages
     // pages are 1 indexed :/
@@ -155,11 +156,11 @@ class CachedEventbriteService {
     // 2. Write the page out to full_output
     const NUMBER_OF_STEPS = 2;
 
-    const bar = new ProgressBar(' updating [:bar] :percent', {
-      complete: '=',
-      incomplete: ' ',
+    const bar = new ProgressBar(" updating [:bar] :percent", {
+      complete: "=",
+      incomplete: " ",
       width: 40,
-      total: totalPages * NUMBER_OF_STEPS,
+      total: totalPages * NUMBER_OF_STEPS
     });
 
     // tick once because first page.
@@ -168,7 +169,7 @@ class CachedEventbriteService {
     this.metrics.eventbrite.totalPages = totalPages;
     this.metrics.eventbrite.totalNumberEvents = parseInt(firstPageData.pagination.object_count, 10);
 
-    bar.interrupt(`Parsing ${firstPageData.pagination.object_count} events over ${totalPages} pages...`)
+    bar.interrupt(`Parsing ${firstPageData.pagination.object_count} events over ${totalPages} pages...`);
 
     while (currentPage <= totalPages) {
       // get next page by setting search param
