@@ -82,7 +82,7 @@ async function init() {
   // 3. Load
 
   // all we gotta do is turn the next bit into csv
-  console.log("generating then writting csv...");
+  console.log(`generating then writting csv for ${events.length} events...`);
   const csvOutputPathObject = {
     dir: "tmp",
     name: reportName,
