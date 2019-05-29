@@ -4,6 +4,7 @@ import to from "await-to-js";
 import path from "path";
 import fs from "fs-extra";
 import util from "util";
+import slugify from "slugify";
 import CachedEventbriteService, { DEFAULT_DAYS_AHEAD, TEST_NUMBER_OF_PAGES } from "./services/cached_eventbrite";
 import EventFilterService from "./services/event_filter";
 
@@ -69,7 +70,10 @@ async function init() {
   }
 
   console.log(`${OUTPUT_FILE_PATH} was saved!`);
-  console.log("Processing Metrics: ", cEbService.generateMetrics());
+
+  const metrics = cEbService.generateMetrics();
+
+  console.log("Processing Metrics: ", metrics);
 
   const rawOutput = JSON.parse(fullRawJSONOutputStr);
   // rawOutput.event_pages[0].events[0].description.text
@@ -81,11 +85,20 @@ async function init() {
 
   // 3. Load
 
+  const { fnInput } = metrics;
+
+  const filteredKeys = ["testMode", "query"];
+
+  const fileNamePostfix = Object.entries(fnInput)
+    .filter(([k]) => !filteredKeys.includes(k))
+    .map(([key, value]) => slugify(`${key} ${value}`))
+    .join("_");
+
   // all we gotta do is turn the next bit into csv
   console.log(`generating then writting csv for ${events.length} events...`);
   const csvOutputPathObject = {
     dir: "tmp",
-    name: reportName,
+    name: `${reportName}_for_${fileNamePostfix}`,
     ext: ".csv"
   };
 

@@ -39,6 +39,10 @@ class EventFilterService {
     });
 
     // TODO: we could do some de dupe by id
+
+
+    // TODO: here also hit eventbrite on this small subset api to get address requires using venue id to request venue which has address
+    // https://www.eventbrite.com/platform/api#/reference/venue
     return results;
   }
 
