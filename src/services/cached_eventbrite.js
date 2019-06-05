@@ -49,7 +49,7 @@ class CachedEventbriteService {
     return `${cacheKeyPrefix}_page_number:${page}`;
   }
 
-  async cachedSearchRequest(key, searchParams) {
+  async cachedRequest(key, requestUrl) {
     // Create configured Eventbrite SDK
     const sdk = eventbrite({ token: EVENTBRITE_OAUTH_TOKEN });
 
@@ -63,9 +63,7 @@ class CachedEventbriteService {
     } else {
       let requestErr = {};
 
-      [requestErr, data] = await to(
-        sdk.request(`/events/search/?${querystring.unescape(querystring.stringify(searchParams))}`)
-      );
+      [requestErr, data] = await to(sdk.request(requestUrl));
 
       if (requestErr) {
         console.error(requestErr);
@@ -76,6 +74,10 @@ class CachedEventbriteService {
     }
 
     return data;
+  }
+
+  async cachedSearchRequest(key, searchParams) {
+    return this.cachedRequest(key, `/events/search/?${querystring.unescape(querystring.stringify(searchParams))}`);
   }
 
   async searchEvents({
@@ -215,6 +217,12 @@ class CachedEventbriteService {
     const fullOutputCacheObject = await this.cache.get(fullOutputCacheKey);
 
     return fullOutputCacheObject.value;
+  }
+
+  async getAddressByEventObject(event) {
+    // https://www.eventbrite.com/platform/api#/reference/venue
+    const venue = await this.cachedRequest(event.venue_id,`/venues/${event.venue_id}/`);
+    return venue.address.localized_address_display;
   }
 }
 

@@ -14,6 +14,8 @@ to get help
 yarn start -h
 ```
 
+this will output a csv that you can upload to google sheets and then use the "Mapping Sheets" add on to see everything on a map
+
 # Useful Commands
 
 ## run `node` to start command line then

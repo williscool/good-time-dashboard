@@ -2,7 +2,16 @@ import Fuse from "fuse.js";
 import { parse } from "json2csv";
 
 const SEARCH_KEYS = ["name.text", "summary", "description.text"];
-const CSV_COLUMNS_KEYS = ["id", "url", "name.text", "start.local", "summary", "description.text", "start.timezone"];
+const CSV_COLUMNS_KEYS = [
+  "id",
+  "url",
+  "address",
+  "name.text",
+  "start.local",
+  "summary",
+  "description.text",
+  "start.timezone"
+];
 
 class EventFilterService {
   constructor(rawOutput) {
@@ -30,7 +39,7 @@ class EventFilterService {
 
   getDefaultSearches() {
     // "rap" = too broad
-    const searches = ["r&b", "hip hop", "crawl","RnB"];
+    const searches = ["r&b", "hip hop", "crawl", "RnB", "college night"];
 
     let results = [];
 
@@ -38,11 +47,7 @@ class EventFilterService {
       results = results.concat(this.fuse.search(query));
     });
 
-    // TODO: we could do some de dupe by id
-
-
-    // TODO: here also hit eventbrite on this small subset api to get address requires using venue id to request venue which has address
-    // https://www.eventbrite.com/platform/api#/reference/venue
+    // TODO: we want to do some de dupe by id
     return results;
   }
 

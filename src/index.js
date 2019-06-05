@@ -80,8 +80,19 @@ async function init() {
 
   // 2. Transform
   console.log("filtering events...");
+
   const filter = new EventFilterService(rawOutput);
-  const events = filter.getDefaultSearches();
+  let events = filter.getDefaultSearches();
+
+  // here also hit eventbrite on this small subset api to get address requires using venue id to request venue which has address
+  console.log("adding addresses...");
+  const eventsPromises = await events.map(async e => {
+    const address =  await cEbService.getAddressByEventObject(e);
+    return {...e, address }
+  });
+
+  // https://stackoverflow.com/questions/33438158/best-way-to-call-an-async-function-within-map
+  events = await Promise.all(eventsPromises)
 
   // 3. Load
 
