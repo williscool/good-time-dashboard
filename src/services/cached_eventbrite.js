@@ -212,7 +212,9 @@ class CachedEventbriteService {
 
     await this.cache.set(fullOutputCacheKey, JSON.stringify(fullOutput));
 
-    return JSON.stringify(await this.cache.get(fullOutputCacheKey));
+    const fullOutputCacheObject = await this.cache.get(fullOutputCacheKey);
+
+    return fullOutputCacheObject.value;
   }
 }
 
