@@ -39,7 +39,7 @@ class EventFilterService {
 
   getDefaultSearches() {
     // "rap" = too broad
-    const searches = ["r&b", "hip hop", "crawl", "RnB", "college night"];
+    const searches = ["r&b", "hip hop", "crawl", "RnB", "college night", "after party"];
 
     let results = [];
 
