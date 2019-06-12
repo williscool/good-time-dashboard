@@ -87,12 +87,19 @@ async function init() {
   // here also hit eventbrite on this small subset api to get address requires using venue id to request venue which has address
   console.log("adding addresses...");
   const eventsPromises = await events.map(async e => {
-    const address =  await cEbService.getAddressByEventObject(e);
-    return {...e, address }
+    const venue = await cEbService.getVenueByEventObject(e);
+
+    const {
+      name,
+      // eslint-disable-next-line camelcase
+      address: { localized_address_display }
+    } = venue;
+
+    return { ...e, address: localized_address_display, venueName: name };
   });
 
   // https://stackoverflow.com/questions/33438158/best-way-to-call-an-async-function-within-map
-  events = await Promise.all(eventsPromises)
+  events = await Promise.all(eventsPromises);
 
   // 3. Load
 

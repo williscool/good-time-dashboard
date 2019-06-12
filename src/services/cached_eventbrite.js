@@ -219,10 +219,9 @@ class CachedEventbriteService {
     return fullOutputCacheObject.value;
   }
 
-  async getAddressByEventObject(event) {
+  async getVenueByEventObject(event) {
     // https://www.eventbrite.com/platform/api#/reference/venue
-    const venue = await this.cachedRequest(event.venue_id,`/venues/${event.venue_id}/`);
-    return venue.address.localized_address_display;
+    return this.cachedRequest(event.venue_id, `/venues/${event.venue_id}/`);
   }
 }
 

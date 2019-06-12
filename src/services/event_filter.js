@@ -6,6 +6,7 @@ const CSV_COLUMNS_KEYS = [
   "id",
   "url",
   "address",
+  "venueName",
   "name.text",
   "start.local",
   "summary",
